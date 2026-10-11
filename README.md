@@ -1,89 +1,79 @@
-# Open-FaaS
+# Open-FaaS — Ecosistema de servicios
 
-Pruebas de servicios web sobre SOAP
-Pruebas sobre el SOAP response
-Añadir nuevos casos de prueba
-Ejecución conjunta de los casos de prueba
-Ejecución de una suite completa
+Ecosistema de microservicios construido con **Spring Cloud** para la aplicación
+*Task Control App*: gestión de controles y calificaciones de alumnos
+(`task-control-service`, con PostgreSQL) y calendario de tareas
+(`taskcontrolapp-calendar`, con MongoDB), con descubrimiento de servicios,
+configuración centralizada y un API gateway como punto único de entrada.
 
-CheckList Funcional
+Todo el ecosistema se puede levantar de una vez con Docker Compose.
 
-    Paginación  
-¿La API devuelve una lista? 
-¿Cuál es el tamaño de la lista? 
-¿Soporta paginación? 
-¿Tiene tamaño por defecto para la paginación? 
-¿Puedo controlar el número de resultados que obtengo en cada página? 
-¿Podría ser diferente para cada usuario? 
-¿Cómo obtiene la API esta información para el usuario? 
-¿Hay alguna restricción para diferentes consumidores de la API, tales como web, móvil o tableta?
+## Arquitectura
 
+| Servicio | Descripción | Puerto |
+|---|---|---:|
+| `server-config` | Configuración centralizada (Spring Cloud Config) | 8888 |
+| `service-discovery` | Descubrimiento de servicios (Eureka) | 8761 |
+| `gateway` | API Gateway, punto único de entrada | 8080 |
+| `task-control-service` | Control de tareas/calificaciones (Spring Data JPA + PostgreSQL) | 8098 |
+| `task-calendar-service` | Calendario de tareas (Spring Data MongoDB) | 8095 |
 
-    Autenticación 
-¿Quién puede acceder a esta API? 
-¿Cómo se autentican? 
-¿Cómo se mantiene la autenticación para llamadas posteriores? 
-¿Soporta múltiple sesiones para los mismos usuarios? 
-¿Qué hay de varias autenticaciones desde la misma máquina? 
-¿Qué debe suceder si el usuario se desconecta de un dispositivo o del navegador? 
-¿Cuántas veces un usuario puede fallar la autenticación? 
-¿Por cuánto tiempo autenticación permanece válida?
--- Control de acceso
---- Quien se puede conectar
---- Error si no esta permitido
---- Multiples conexiones por usuario
---- Cantidad de conexiones por corredor
---- PErsistencia de Secion
---- Cuantas veces puede fallar la utenticación
---- Tiempo de permanencia de sesión
+Servicios de apoyo: `postgresdb` (PostgreSQL, 5432) y `mongodb`.
 
-    Parámetros / cadenas de consulta 
-¿Cómo estamos enviando datos en la cadena de consulta? 
-¿Cuál dato es obligatorio? 
-¿Cuál es opcional? 
-¿Lo está validando? 
-¿Es valida para los tipos  null? 
-¿Que define  que un los valores son correctos? 
-¿Y si esos valores cambian? ¿Tengo que escapar de ciertos caracteres? 
-¿Puedo utilizar caracteres Unicode?
+Cada microservicio de negocio está organizado como proyecto Maven multimódulo
+(`boot`, `controller`, `service`, `repository`, `model`) sobre Spring Boot 2.1
+y Spring Cloud Greenwich.
 
-    Autorización 
-¿Quién puede acceder a esta API? 
-¿Cómo se limita el acceso? 
-¿Cómo puedo obtener acceso privilegiado? 
-¿Cuál es el riesgo de que alguien obtenga acceso no autorizado? 
-¿Hay jerarquía de acceso o un acceso diferente para diferentes roles? 
-¿Cuántos niveles de autorizaciones hay? ¿Cómo se hace cumplir la autorización a nivel del sistema?
+## Estructura del repositorio
 
-    Comportamiento 
-¿La API se comporta como se espera? 
-¿Está funcionando como fue diseñada? 
-¿Está cumpliendo con las expectativas de los usuarios? 
-¿Se comporta bajo la carga esperada? 
-¿Qué tipo de contenido soporta? 
-¿La prueba es para XML, JSON o ambos? 
-¿Esta presente la cabecera?
--- Prueba de Stress
+- `docker-compose/` — `docker-compose.yml` para levantar todo el ecosistema
+- `gateway/` — API Gateway
+- `server-config/` — servidor de configuración centralizada
+- `service-discovery/` — servidor Eureka de descubrimiento de servicios
+- `task-control-service/` — microservicio de control de tareas (PostgreSQL)
+- `taskcontrolapp-calendar/` — microservicio de calendario de tareas (MongoDB)
+- `quarkus-base-patterns/` — patrones base con Quarkus
 
+## Requisitos
 
-    Control de errores 
-¿Retorna los códigos de error correctos? 
-¿Está dando los códigos HTTP correctas? 
-¿Se valida la entrada? ¿Maneja parámetros faltantes? 
-¿Maneja entradas equivocadas? 
-¿Se emite el error apropiado si se solicita mal el tipo de contenido? 
-¿Se bloquean los usuarios después de emitir el mismo tipo de errores? 
-¿Hay llamadas asíncronas – En caso afirmativo, ¿y si hay algún error en eso? ¿Se registran estos errores? 
-¿Y si todo el sistema o alguna parte del sistema no está disponible, ¿cómo afectaría al usuario? ¿Qué pasa si la caída del sistema durante la transacción, ¿cómo podría recuperarse? ¿Qué error tendría que dar?
+- Java 8 o superior
+- Maven 3.x
+- Docker y Docker Compose
 
--- Pruebas de estres
--- Pruebas de seción
--- Pruebas de autorizacion
--- Pruebas de errores conocidos
--- Escenarios d eneocio
--- Pruebas de rendimiento
--- 
+## Puesta en marcha
 
+### Opción 1: Docker Compose (recomendado)
 
+```bash
+cd docker-compose
+docker-compose up
+```
 
+Levanta las bases de datos y todos los servicios con las imágenes publicadas
+(`mtribor/taskcontrolapp-*`, con las credenciales definidas en el propio
+`docker-compose.yml`). El gateway queda disponible en http://localhost:8080.
 
+### Opción 2: construir desde el código fuente
+
+Cada servicio es un proyecto Maven multimódulo. Por ejemplo:
+
+```bash
+cd task-control-service
+mvn clean package
+java -jar boot/target/*.jar
+```
+
+Los servicios leen su configuración de `server-config` (puerto 8888) y se
+registran en Eureka (puerto 8761): levanta esos dos primero.
+
+## Puertos y consolas
+
+- Eureka: http://localhost:8761
+- Gateway: http://localhost:8080
+- task-control-service: http://localhost:8098
+- task-calendar-service: http://localhost:8095
+
+## Licencia
+
+Este proyecto está bajo la **GNU General Public License v3.0**.
+Consulta el archivo [LICENSE](LICENSE) para más detalles.
